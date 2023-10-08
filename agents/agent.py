@@ -1,9 +1,12 @@
 from uagents import Agent, Context
-from plyer import notification
 from api.weather_api import fetch_weather_data
-import os
 import json
+import os
+import signal
+import sys
 from dotenv import load_dotenv
+from plyer import notification
+from infi.systray import SysTrayIcon
 
 # loading the env variables
 load_dotenv()
@@ -17,12 +20,20 @@ if os.path.isfile("user-data.json"):
 
 # setting up the api key and city
 api_key = os.getenv("API_KEY")
-city = USER_DATA['location'] or "Kolkata"
-# country_code = 'IN'  # Country code (optional)
-frequency = USER_DATA['frequency'] or "intermediate"
+city = USER_DATA.get("location")or "Kolkata"
+frequency = USER_DATA.get("frequency") or "intermediate"
 
-# creating the agent
-alertAgent = Agent(name="alertAgent", seed="alertAgentReovery")
+#Setting time interval for agent call
+TIME_PERIOD = 60
+if frequency == "fast":
+    TIME_PERIOD *= 20
+elif frequency == "intermediate":
+    TIME_PERIOD *= 60
+elif frequency == "slow":
+    TIME_PERIOD *= 120
+
+#creating the agent
+alertAgent = Agent(name=os.getenv("AGENT_NAME"), seed=os.getenv("AGENT_SEED"))
 
 # defining functions to fetch weather data
 def fetchWeather():
@@ -33,6 +44,43 @@ def fetchWeather():
     else:
         return None
 
+# defining the agent function
+@alertAgent.on_interval(period=TIME_PERIOD)
+async def alertAgentFunc(ctx: Context):
+    if fetchWeather():
+        temp, des = fetchWeather()
+        if USER_DATA:
+            if temp < float(USER_DATA['min_temp']):
+                # show notification
+                notification.notify(
+                    app_icon =os.getcwd()+"\\app\\logo.ico",
+                    title="It is getting cold 🥶",
+                    message=f"The current temperature is {int(temp - float(USER_DATA['min_temp']))} °C less than your set temperature.",
+                    timeout=10
+
+                )
+
+            elif temp > float(USER_DATA['max_temp']):
+                notification.notify(
+                    app_icon =os.getcwd()+"\\app\\logo.ico",
+                    title="It is getting hot 🥵",
+                    message=f"The current temperature is {int(temp - float(USER_DATA['max_temp']))} °C more than your set temperature.",
+                    timeout=10
+
+                )
+
+
+
+
+def on_quit_callback(systray):
+    os.kill(os.getpid(), signal.SIGTERM)
+    sys.exit()
+
+
+systray = SysTrayIcon(os.getcwd()+"\\app\\logo.ico", "Temperature Alert Agent",
+                      on_quit=on_quit_callback)
 
 if __name__ == "__main__":
+    systray.start()
     alertAgent.run()
+
