@@ -12,6 +12,9 @@ The Temperature Alert Agent is a tool designed to fetch real-time temperatures f
 
 - Python 3.x
 - uAgent library (provide installation instructions or a link to the library)
+- plyer library
+- infi.systray library
+- python-dotenv library
 
 ## Installation
 
