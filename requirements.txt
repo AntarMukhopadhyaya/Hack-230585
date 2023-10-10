@@ -1,0 +1,5 @@
+infi.systray==0.1.12
+Pillow==9.3.0
+plyer==2.1.0
+uagents==0.6.2
+python-dotenv==0.21.0
